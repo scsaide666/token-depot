@@ -1,0 +1,16 @@
+# Keep Caddy's release and standard modules; rebuild only its vulnerable Go and
+# x/net dependencies. Versions and official base manifests are pinned for audit.
+FROM caddy:2.11.7-builder-alpine@sha256:d6161a2c82fd58b3205048958fb6246d0c5d892beee8a47e90944610c4efd100 AS builder
+ENV GOTOOLCHAIN=go1.26.9 XCADDY_SETCAP=0
+RUN xcaddy build v2.11.7 --replace golang.org/x/net=golang.org/x/net@v0.60.0 --output /usr/bin/caddy
+
+FROM caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+RUN if [ -n "$(getcap /usr/bin/caddy)" ]; then setcap -r /usr/bin/caddy; fi \
+ && test -z "$(getcap /usr/bin/caddy)" \
+ && addgroup -g 10001 depot \
+ && adduser -D -H -u 10001 -G depot depot \
+ && chown -R 10001:10001 /data /config \
+ && chmod 700 /data/caddy /config/caddy \
+ && caddy version
+USER 10001:10001

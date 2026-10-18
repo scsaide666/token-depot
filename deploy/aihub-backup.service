@@ -1,0 +1,10 @@
+[Unit]
+Description=AIHub PostgreSQL backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/aihub
+Environment=BACKUP_KEY_FILE=/etc/token-depot/backup.key
+ExecStart=/bin/sh /opt/aihub/deploy/backup.sh
+

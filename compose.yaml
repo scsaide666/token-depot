@@ -1,0 +1,159 @@
+name: aihub
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+x-app-secrets: &app-secrets
+  - app_env
+services:
+  postgres:
+    image: postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aihub
+      POSTGRES_USER: aihub_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password, app_db_password]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init-database.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aihub_admin -d aihub"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+    cpus: 0.6
+    logging: *logging
+  app:
+    image: ${APP_IMAGE:-aihub:local}
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    init: true
+    secrets: *app-secrets
+    volumes: ["${PAYMENT_KEYS_DIR:-./deploy/payment-keys}:/run/payment-keys:ro"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [database, edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    mem_limit: 1536m
+    cpus: 1.2
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 250s
+    logging: *logging
+  redis:
+    image: redis:7.4.11-bookworm@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+    restart: unless-stopped
+    # Keeps redis:// loopback-only, matching the existing security policy.
+    network_mode: service:app
+    depends_on: [app]
+    secrets: [redis_password]
+    volumes: [redis_data:/data]
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        umask 077
+        printf 'bind 127.0.0.1\nprotected-mode yes\nappendonly yes\nmaxmemory 192mb\nmaxmemory-policy noeviction\nrequirepass %s\n' "$$(cat /run/secrets/redis_password)" > /tmp/redis.conf
+        chown redis:redis /tmp/redis.conf
+        chown -R redis:redis /data
+        exec /usr/local/bin/docker-entrypoint.sh redis-server /tmp/redis.conf
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$(cat /run/secrets/redis_password) redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 384m
+    cpus: 0.2
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+  migrate:
+    image: ${TOOLS_IMAGE:-aihub-tools:local}
+    build: { context: ., target: tools }
+    profiles: [ops]
+    secrets: *app-secrets
+    networks: [database]
+    depends_on:
+      postgres: { condition: service_healthy }
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+  recovery:
+    image: ${TOOLS_IMAGE:-aihub-tools:local}
+    restart: unless-stopped
+    init: true
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        while true; do
+          if node --env-file=/run/secrets/app_env --conditions=react-server --import tsx scripts/recover-reservations.ts; then
+            touch /tmp/aihub-recovery-success
+          else
+            echo 'Reservation recovery sweep failed; inspect pending count and retry.' >&2
+          fi
+          sleep 60
+        done
+    healthcheck:
+      test: ["CMD", "node", "-e", "const fs=require('node:fs');try{process.exit(Date.now()-fs.statSync('/tmp/aihub-recovery-success').mtimeMs<300000?0:1)}catch{process.exit(1)}"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 2
+    secrets: *app-secrets
+    networks: [database]
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 256m
+    cpus: 0.2
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+  caddy:
+    image: ${CADDY_IMAGE:-token-depot-caddy:local}
+    build: { context: ., dockerfile: deploy/Dockerfile.caddy }
+    profiles: [public]
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports: ["80:80", "443:443"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    sysctls: { net.ipv4.ip_unprivileged_port_start: 0 }
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      app: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2015/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 192m
+    cpus: 0.2
+    logging: *logging
+networks:
+  database: { internal: true }
+  edge: {}
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+secrets:
+  app_env: { file: "${APP_SECRET_FILE:-./deploy/secrets/app.env}" }
+  db_password: { file: "${DB_PASSWORD_FILE:-./deploy/secrets/db-password}" }
+  app_db_password: { file: "${APP_DB_PASSWORD_FILE:-./deploy/secrets/app-db-password}" }
+  redis_password: { file: "${REDIS_PASSWORD_FILE:-./deploy/secrets/redis-password}" }

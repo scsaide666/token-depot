@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env*
+secrets
+deploy/secrets
+deploy/payment-keys
+deploy/local-test-secrets
+deploy/local-test-payment-keys
+backups
+*.log
+*.tsbuildinfo
+coverage
+work
+generated
+docker-test-results
+browser-results

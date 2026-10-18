@@ -1,0 +1,69 @@
+/* Developer surfaces extend the existing Geist tokens and mobile controls. */
+.developer-docs .docs-layout { gap: 28px; }
+.developer-docs .docs-section { padding-block: 40px 56px; }
+.developer-docs .docs-section-link { border-radius: var(--radius-control); min-height: 36px; font-size: 12px; }
+.developer-docs .docs-section-link[aria-current="location"] { background: var(--active-background); color: var(--active-foreground); box-shadow: inset 2px 0 var(--brand); }
+.developer-docs .docs-topic-link[aria-current="location"] { color: var(--link); font-weight: 500; }
+.docs-code-window { border: 1px solid var(--code-border); border-radius: var(--radius-panel); }
+.docs-code :is(.hljs-comment, .hljs-quote) { color: var(--code-muted); }
+.docs-code :is(.hljs-keyword, .hljs-literal, .hljs-type) { color: var(--code-keyword); }
+.docs-code :is(.hljs-string, .hljs-attr) { color: var(--code-string); }
+.docs-code :is(.hljs-number, .hljs-title) { color: var(--code-number); }
+.docs-search-trigger { gap: 8px; font-size: 12px; background: var(--secondary); box-shadow: none; }
+.docs-search-dialog { max-width: 640px; gap: 16px; }
+.docs-search-results { min-width: 0; max-height: 50dvh; overflow-y: auto; overscroll-behavior: contain; }
+.docs-search-result { display: block; min-width: 0; border-top: 1px solid var(--border); padding: 16px 12px; border-radius: var(--radius-control); overflow-wrap: anywhere; transition: background-color 160ms var(--ease-natural); }
+.docs-search-result:hover { background: var(--secondary); }
+.docs-search-result:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.model-reference { min-width: 0; margin-top: 20px; }
+.model-reference-provider { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); }
+.model-reference-provider > [data-slot="badge"] { margin-left: auto; }
+.model-reference-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 1px solid var(--border); margin-block: 24px; }
+.model-reference-specs > div { min-width: 0; padding-block: 20px; }
+.model-reference-specs > div:nth-child(odd) { padding-right: 16px; }
+.model-reference-specs > div:nth-child(n+3) { border-top: 1px solid var(--border); }
+.model-reference-specs dt { font-size: 11px; color: var(--muted-foreground); }
+.model-reference-specs dd { margin-top: 8px; font-size: 22px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.model-reference-specs dd small { display: block; margin-top: 4px; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--muted-foreground); }
+.model-reference-specs dd.model-reference-availability { font-size: 13px; letter-spacing: 0; }
+.model-reference-note { margin-top: 12px; font-size: 12px; line-height: 1.7; color: var(--muted-foreground); }
+.dashboard-console.console-model-detail.developer-model-dialog { max-width: 680px; }
+.developer-playground > header > div { padding-top: max(8px, var(--safe-top)); padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); }
+.developer-playground main { padding-bottom: max(32px, var(--safe-bottom)); }
+.developer-playground h1 { font-size: var(--type-page-title); }
+.developer-playground .playground-workspace { gap: 20px; }
+.developer-playground .playground-workspace > :is(aside, section) { border-color: var(--border); border-radius: var(--radius-panel); box-shadow: none; }
+.playground-request-status { border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 10px; line-height: 1.4; color: var(--muted-foreground); background: var(--secondary); }
+.playground-price-reference dl { display: grid; gap: 12px; }
+.playground-price-reference dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; min-width: 0; font-size: 11px; }
+.playground-price-reference dt { color: var(--muted-foreground); }
+.playground-price-reference dd { font-family: var(--font-code); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.developer-playground .playground-conversation { min-height: 300px; max-height: 55dvh; }
+.developer-playground .playground-send-actions { flex-wrap: wrap; }
+.developer-playground .playground-send-actions > button { min-width: 80px; margin-left: auto; flex-shrink: 0; }
+.developer-playground .playground-usage { background: var(--secondary); }
+.developer-playground nav > a { min-height: 44px; display: inline-flex; align-items: center; }
+@media (min-width: 1024px) {
+  .developer-docs .docs-layout { grid-template-columns: 184px minmax(0, 1fr) 152px; }
+  .developer-playground .playground-workspace { grid-template-columns: 280px minmax(0, 1fr); }
+  .developer-playground .playground-workspace > aside { position: sticky; top: 24px; }
+  .developer-playground .playground-conversation { min-height: 380px; max-height: 56dvh; }
+}
+@media (min-width: 1280px) { .developer-docs .docs-layout { grid-template-columns: 200px minmax(0, 1fr) 168px; gap: 40px; } }
+@media (max-width: 767px) {
+  .developer-docs > header > div { height: calc(64px + var(--safe-top)); padding-top: var(--safe-top); padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); }
+  .developer-docs .docs-mobile-navigation { top: calc(64px + var(--safe-top)); }
+  .developer-docs .docs-section-link { min-height: 44px; }
+  .developer-docs .docs-topic-link { min-height: 44px; display: flex; align-items: center; }
+  .developer-docs .docs-anchor { scroll-margin-top: calc(16px + var(--safe-top)); }
+  .developer-docs .docs-layout { padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); }
+  .developer-docs .docs-search-trigger { min-width: 44px; padding-inline: 0; }
+  .developer-playground .playground-conversation-header { flex-wrap: wrap; padding-block: 8px; }
+  .developer-playground main { padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); }
+  .developer-playground .playground-workspace > aside { position: static; }
+  .model-reference-specs dd { font-size: 19px; }
+}
+@media (pointer: coarse) and (min-width: 768px) {
+  .developer-docs :is(.docs-section-link, .docs-topic-link) { min-height: 44px; display: flex; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) { .docs-search-result { transition: none; } }

@@ -1,0 +1,3 @@
+export default function Loading() {
+  return <div role="status" aria-label="Loading payment" className="mx-auto max-w-[560px] rounded-[18px] border border-border/60 bg-card p-8 sm:p-10"><span className="sr-only">Loading payment…</span><div aria-hidden="true" className="space-y-7"><div className="mx-auto h-8 w-52 max-w-full rounded bg-secondary motion-safe:animate-pulse" /><div className="mx-auto aspect-square w-[240px] max-w-full rounded-[12px] bg-secondary/50 motion-safe:animate-pulse" />{[1, 2, 3].map((value) => <div key={value} className="h-6 rounded bg-secondary/50 motion-safe:animate-pulse" />)}<div className="h-11 rounded-sm bg-secondary motion-safe:animate-pulse" /></div></div>;
+}

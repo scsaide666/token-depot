@@ -1,0 +1,106 @@
+name: aihub-docker-test
+
+# Opt-in loopback HTTPS proxy for an isolated local Docker project.
+# Invoke with: docker compose -f compose.yaml -f compose.local-test.yaml
+services:
+  caddy-local:
+    image: ${CADDY_IMAGE:-token-depot-caddy:local}
+    build: { context: ., dockerfile: deploy/Dockerfile.caddy }
+    profiles: [local-https]
+    restart: unless-stopped
+    ports: ["127.0.0.1:8443:8443"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - ./deploy/Caddyfile.local-test:/etc/caddy/Caddyfile:ro
+      - caddy_local_data:/data
+      - caddy_local_config:/config
+    networks: [edge]
+    depends_on:
+      app: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      sse-fixture: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2015/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 192m
+    cpus: 0.2
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Secret-free SSE endpoint used only by the loopback Caddy acceptance probe.
+  sse-fixture:
+    image: ${TEST_TOOLS_IMAGE:-aihub-test-tools:local}
+    build: { context: ., target: test-tools }
+    profiles: [local-https]
+    entrypoint: ["node", "scripts/local-docker-sse-fixture.mjs"]
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3188/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.2
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Runs the existing gateway suite against an isolated PostgreSQL test database.
+  # Sharing postgres' network namespace makes its loopback test DB and the
+  # suite's loopback Mock Provider satisfy the production SSRF fixture guard.
+  redis-fixture:
+    image: redis:7.4.11-bookworm@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+    profiles: [local-mock]
+    network_mode: service:postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    user: redis
+    command: ["redis-server", "--bind", "127.0.0.1", "--protected-mode", "yes", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.2
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  gateway-mock-tests:
+    image: ${TEST_TOOLS_IMAGE:-aihub-test-tools:local}
+    build: { context: ., target: test-tools }
+    profiles: [local-mock]
+    network_mode: service:postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis-fixture: { condition: service_healthy }
+    secrets: [gateway_test_env]
+    entrypoint: ["node", "--env-file=/run/secrets/gateway_test_env", "--conditions=react-server", "--import", "tsx"]
+    command: ["scripts/test-gateway.ts"]
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  caddy_local_data:
+  caddy_local_config:
+
+secrets:
+  gateway_test_env: { file: "./deploy/local-test-secrets/gateway-test.env" }

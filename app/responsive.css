@@ -1,0 +1,111 @@
+/* Shared mobile behavior. Tailwind breakpoints: sm 640, md 768, lg 1024. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+[data-slot="table-container"] {
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--input) transparent;
+}
+.ui-dialog-surface {
+  left: calc((100vw + max(16px, var(--safe-left)) - max(16px, var(--safe-right))) / 2);
+  top: calc((100vh + max(16px, var(--safe-top)) - max(16px, var(--safe-bottom))) / 2);
+  top: calc((100dvh + max(16px, var(--safe-top)) - max(16px, var(--safe-bottom))) / 2);
+  width: calc(100vw - max(16px, var(--safe-left)) - max(16px, var(--safe-right)));
+  max-height: calc(100vh - max(16px, var(--safe-top)) - max(16px, var(--safe-bottom)));
+  max-height: calc(100dvh - max(16px, var(--safe-top)) - max(16px, var(--safe-bottom)));
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 20px;
+  min-width: 0;
+}
+[data-slot="dialog-header"] { min-width: 0; overflow-wrap: anywhere; }
+.ui-dialog-surface:has(> [data-slot="dialog-close"]) [data-slot="dialog-header"] { padding-right: 40px; }
+.ui-floating-surface { overflow-wrap: anywhere; }
+[data-slot="dropdown-menu-content"] {
+  max-width: min(calc(100vw - 32px), var(--radix-dropdown-menu-content-available-width));
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-slot="popover-content"] {
+  max-width: min(calc(100vw - 32px), var(--radix-popover-content-available-width));
+  max-height: var(--radix-popover-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-slot="tooltip-content"] { max-width: min(calc(100vw - 32px), var(--radix-tooltip-content-available-width)); }
+.dashboard-sheet {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  overscroll-behavior-y: contain;
+}
+.model-detail-sheet > .sticky { top: var(--safe-top); }
+.ui-toast-viewport {
+  right: max(16px, var(--safe-right));
+  bottom: max(16px, var(--safe-bottom));
+  width: min(400px, calc(100vw - max(16px, var(--safe-left)) - max(16px, var(--safe-right))));
+}
+.responsive-filters { min-width: 0; flex: 3 1 480px; }
+.responsive-filters-toggle { display: none; }
+.responsive-filter-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.responsive-filter-count { font-size: 11px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767px) {
+  /* 16px editable text avoids focus zoom in iOS; read-only code stays compact. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
+    font-size: 16px;
+  }
+  [data-slot="button"], [data-slot="dialog-close"], [data-slot="sheet-close"],
+  [data-slot="sheet-trigger"], [data-slot="dropdown-menu-item"], .ui-code-copy,
+  .ui-toast button, .ui-feedback button, .aihub-theme-control button, [role="tab"], [role="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  [data-slot="dialog-close"] { top: 8px; right: 8px; }
+  [data-slot="input"], select.model-explorer-select { font-size: 16px; }
+  .home-navbar > div { height: calc(64px + var(--safe-top)); padding-top: var(--safe-top); padding-inline: max(20px, var(--safe-left)) max(20px, var(--safe-right)); }
+  #footer { padding-bottom: var(--safe-bottom); }
+  #footer .home-footer-link { display: inline-flex; align-items: center; min-height: 44px; }
+  #footer ul { row-gap: 0; }
+  #mobile-navigation .home-nav-link { min-height: 44px; display: flex; align-items: center; }
+  .docs-header-link { min-width: 44px; min-height: 44px; }
+  .admin-nav-item { min-height: 44px; }
+  .admin-console .admin-header { height: calc(56px + var(--safe-top)); padding-top: var(--safe-top); padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); }
+  .admin-console .admin-main { padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right)); padding-bottom: max(40px, var(--safe-bottom)); }
+  .auth-shell { padding-inline: max(24px, var(--safe-left)) max(24px, var(--safe-right)); padding-block: max(48px, var(--safe-top)) max(48px, var(--safe-bottom)); }
+  .aihub-brand { min-height: 44px; }
+  .pricing-search + button { min-height: 44px; min-width: 44px; }
+  input.pricing-search { padding-right: 52px; }
+  button.auth-link { min-height: 44px; display: inline-flex; align-items: center; }
+  [data-slot="dialog-footer"] > [data-slot="button"] { width: 100%; }
+  .responsive-filters { flex-basis: 100%; }
+  .responsive-filters-toggle { display: inline-flex; width: 100%; justify-content: flex-start; }
+  .responsive-filters-toggle > svg:last-child { margin-left: auto; }
+  .responsive-filter-fields { display: none; gap: 12px 8px; padding-top: 16px; }
+  .responsive-filter-fields[data-expanded="true"] { display: flex; }
+  .responsive-filter-fields > label { flex: 1 1 calc(50% - 8px); min-width: 0; }
+}
+
+@media (pointer: coarse) and (min-width: 768px) {
+  [data-slot="button"], [data-slot="dropdown-menu-item"], [data-slot="dialog-close"],
+    [data-slot="sheet-close"], [data-slot="sheet-trigger"], .ui-code-copy, .aihub-theme-control button, [role="tab"], [role="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea,
+  [data-slot="input"], select.model-explorer-select { font-size: 16px; }
+  #footer .home-footer-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .home-navbar .home-nav-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .aihub-brand { min-height: 44px; }
+  .pricing-search + button { min-height: 44px; min-width: 44px; }
+  input.pricing-search { padding-right: 52px; }
+  button.auth-link { min-height: 44px; display: inline-flex; align-items: center; }
+}

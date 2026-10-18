@@ -1,0 +1,2 @@
+import { ConsoleMetricsSkeleton, ConsolePageHeader, ConsoleTableSkeleton } from "@/components/dashboard/console-primitives";
+export default function Loading() { return <div className="console-page console-loading"><ConsolePageHeader title="Usage" description="Track requests, token usage, latency and cost." /><ConsoleMetricsSkeleton /><div className="console-loading-chart" aria-hidden="true" /><ConsoleTableSkeleton label="Loading request history" /></div>; }

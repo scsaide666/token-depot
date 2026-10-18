@@ -1,0 +1,147 @@
+name: td-reliability-20261016
+# Standalone local acceptance stack. Never combine with production compose files.
+# App/Mock/DB upstream egress is blocked by the internal network. Caddy alone
+# also joins proxy_edge, allowing Docker to publish its loopback HTTPS port.
+services:
+  suite-postgres:
+    extends: { service: postgres }
+    profiles: [suite]
+    volumes: [reliability_suite_pg:/var/lib/postgresql/data]
+  suite-redis:
+    extends: { service: redis }
+    profiles: [suite]
+    network_mode: service:suite-postgres
+    depends_on: { suite-postgres: { condition: service_healthy } }
+    volumes: [reliability_suite_redis:/data]
+  suite-tools:
+    extends: { service: tools }
+    profiles: [suite]
+    network_mode: service:suite-postgres
+    volumes: ['../lib/risk/redis.ts:/app/lib/risk/redis.ts:ro']
+  postgres:
+    image: postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    environment:
+      POSTGRES_DB: aihub_auth_test
+      POSTGRES_USER: aihub
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    secrets: [db-password]
+    networks: [sandbox]
+    volumes: [reliability_pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U aihub -d aihub_auth_test']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 768m
+    cpus: 0.6
+    restart: 'no'
+  redis:
+    image: redis:7.4.11-bookworm@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+    network_mode: service:postgres
+    secrets: [redis-password]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        umask 077
+        printf 'bind 127.0.0.1\nprotected-mode yes\nappendonly yes\nmaxmemory 192mb\nmaxmemory-policy noeviction\nrequirepass %s\n' "$$(cat /run/secrets/redis-password)" > /tmp/redis.conf
+        chown redis:redis /tmp/redis.conf
+        exec /usr/local/bin/docker-entrypoint.sh redis-server /tmp/redis.conf
+    volumes: [reliability_redis:/data]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH=$$(cat /run/secrets/redis-password) redis-cli ping | grep -q PONG']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+    cpus: 0.2
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  app:
+    image: token-depot-reliability:20261016
+    network_mode: service:postgres
+    init: true
+    environment: { HOSTNAME: 0.0.0.0, PORT: '3000' }
+    secrets: [app_env]
+    depends_on: { redis: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 1536m
+    cpus: 1.2
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  mock:
+    image: token-depot-reliability-sdk:20261016
+    network_mode: service:postgres
+    entrypoint: [node, --env-file=/run/secrets/app_env, scripts/reliability/mock.mjs]
+    secrets: [app_env]
+    volumes: ['../scripts/reliability:/app/scripts/reliability:ro']
+    depends_on: { postgres: { condition: service_healthy } }
+    mem_limit: 128m
+    cpus: 0.2
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  tools:
+    image: token-depot-reliability-sdk:20261016
+    profiles: [tools]
+    network_mode: service:postgres
+    entrypoint: [node, --env-file=/run/secrets/app_env, --conditions=react-server, --import, tsx]
+    secrets: [app_env, suite_env]
+    volumes:
+      - '../scripts/reliability:/app/scripts/reliability:ro'
+      - '../lib/risk/redis.ts:/app/lib/risk/redis.ts:ro'
+      - '../docker-test-results/reliability-20261016/evidence:/evidence'
+      - '../../../work:/work'
+    mem_limit: 1024m
+    cpus: 1.0
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  recovery:
+    image: token-depot-ops-security:20261016
+    profiles: [recovery]
+    network_mode: service:postgres
+    entrypoint: [node, --env-file=/run/secrets/app_env, --conditions=react-server, --import, tsx]
+    command: [scripts/recover-reservations.ts]
+    secrets: [app_env]
+    mem_limit: 256m
+    cpus: 0.2
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  caddy:
+    image: token-depot-caddy-security:20261016
+    networks: [sandbox, proxy_edge]
+    ports: ['127.0.0.1:9443:9443']
+    volumes:
+      - './Caddyfile.reliability:/etc/caddy/Caddyfile:ro'
+      - reliability_tls:/data
+      - reliability_proxy:/config
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on: { app: { condition: service_healthy } }
+    mem_limit: 192m
+    cpus: 0.2
+    restart: 'no'
+networks:
+  sandbox: { internal: true }
+  proxy_edge: {}
+volumes:
+  reliability_pg: {}
+  reliability_redis: {}
+  reliability_tls: {}
+  reliability_proxy: {}
+  reliability_suite_pg: {}
+  reliability_suite_redis: {}
+secrets:
+  db-password: { file: '../docker-test-results/reliability-20261016/secrets/db-password' }
+  redis-password: { file: '../docker-test-results/reliability-20261016/secrets/redis-password' }
+  app_env: { file: '../docker-test-results/reliability-20261016/secrets/app.env' }
+  suite_env: { file: '../docker-test-results/reliability-20261016/secrets/suite.env' }

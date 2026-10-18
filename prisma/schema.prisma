@@ -1,0 +1,410 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ModelCacheRevision {
+  id       Int    @id
+  revision BigInt @default(0)
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ModelProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  DEEPSEEK
+}
+
+enum ApiRequestStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum ApiRequestSource {
+  API
+  PLAYGROUND
+}
+
+enum WalletTransactionType {
+  USAGE
+  RECHARGE
+  ADMIN_ADJUSTMENT
+}
+
+enum PaymentMethod {
+  ALIPAY
+  WECHAT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CLOSED
+  REFUNDED
+}
+
+enum CircuitState {
+  CLOSED
+  OPEN
+  HALF_OPEN
+}
+
+enum ProviderCostStatus {
+  KNOWN
+  NOT_INCURRED
+  PENDING_RECONCILIATION
+}
+
+enum ExecutionState {
+  NOT_SENT
+  REJECTED
+  UNCERTAIN
+  COMPLETED
+}
+
+model ProviderChannel {
+  id                   String       @id @default(uuid()) @db.Uuid
+  code                 String       @unique @db.VarChar(100)
+  name                 String       @db.VarChar(120)
+  provider             ModelProvider
+  apiKeyEnv            String       @db.VarChar(100)
+  baseUrlEnv           String       @db.VarChar(100)
+  enabled              Boolean      @default(true)
+  priority             Int          @default(100)
+  weight               Int          @default(1)
+  timeoutMs            Int          @default(90000)
+  rpm                  Int          @default(60)
+  tpm                  Int          @default(200000)
+  concurrency          Int          @default(10)
+  failureThreshold     Int          @default(5)
+  cooldownMs           Int          @default(30000)
+  idempotentRequests   Boolean      @default(false)
+  circuitState         CircuitState @default(CLOSED)
+  circuitVersion       Int          @default(0)
+  consecutiveFailures  Int          @default(0)
+  openedUntil          DateTime?    @db.Timestamptz(3)
+  rateLimitedUntil     DateTime?    @db.Timestamptz(3)
+  probeAttemptId       String?      @db.Uuid
+  probeExpiresAt       DateTime?    @db.Timestamptz(3)
+  createdAt            DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @db.Timestamptz(3)
+  models               ModelChannel[]
+  attempts             ProviderAttempt[]
+
+  @@index([enabled, provider, priority])
+}
+
+model ModelChannel {
+  id                    String          @id @default(uuid()) @db.Uuid
+  modelId               String          @db.Uuid
+  channelId             String          @db.Uuid
+  providerModel         String          @db.VarChar(200)
+  contextWindow         Int
+  inputPricePerMillion  Decimal         @db.Decimal(22, 8)
+  outputPricePerMillion Decimal         @db.Decimal(22, 8)
+  enabled               Boolean         @default(true)
+  preferred             Boolean         @default(false)
+  createdAt             DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime        @updatedAt @db.Timestamptz(3)
+  model                 Model           @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  channel               ProviderChannel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  attempts              ProviderAttempt[]
+
+  @@unique([modelId, channelId])
+  @@index([modelId, enabled])
+  @@index([channelId, createdAt, id])
+}
+
+model ProviderAttempt {
+  id                    String             @id @default(uuid()) @db.Uuid
+  requestId             String             @db.Uuid
+  channelId             String             @db.Uuid
+  bindingId             String?            @db.Uuid
+  attemptNumber         Int
+  executionGroup        String             @db.Char(64)
+  provider              ModelProvider
+  providerModel         String             @db.VarChar(200)
+  status                ApiRequestStatus   @default(PENDING)
+  executionState        ExecutionState     @default(NOT_SENT)
+  costStatus            ProviderCostStatus @default(NOT_INCURRED)
+  providerCost          Decimal?           @db.Decimal(50, 20)
+  inputTokens           Int?
+  outputTokens          Int?
+  totalTokens           Int?
+  inputPricePerMillion  Decimal            @db.Decimal(22, 8)
+  outputPricePerMillion Decimal            @db.Decimal(22, 8)
+  estimatedTokens       Int
+  circuitVersion        Int
+  latencyMs             Int                @default(0)
+  errorCode             String?            @db.VarChar(64)
+  upstreamStatus        Int?
+  dispatchedAt          DateTime?          @db.Timestamptz(3)
+  finishedAt            DateTime?          @db.Timestamptz(3)
+  expiresAt             DateTime           @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(3)
+  request               ApiRequest         @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
+  channel               ProviderChannel    @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  binding               ModelChannel?      @relation(fields: [bindingId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, attemptNumber])
+  @@index([channelId, createdAt, status])
+  @@index([channelId, status, expiresAt])
+  @@index([executionGroup, costStatus])
+  @@index([requestId, status])
+}
+
+model Model {
+  id                    String        @id @default(uuid()) @db.Uuid
+  slug                  String        @unique @db.VarChar(100)
+  name                  String        @db.VarChar(120)
+  provider              ModelProvider
+  providerModel         String        @db.VarChar(200)
+  description           String        @db.VarChar(1000)
+  contextWindow         Int
+  inputPricePerMillion  Decimal       @db.Decimal(22, 8)
+  outputPricePerMillion Decimal       @db.Decimal(22, 8)
+  markupMultiplier      Decimal       @default(1) @db.Decimal(12, 6)
+  enabled               Boolean       @default(true)
+  createdAt             DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @db.Timestamptz(3)
+  apiRequests           ApiRequest[]
+  channels              ModelChannel[]
+
+  @@index([enabled, provider])
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String     @db.VarChar(80)
+  email        String     @unique @db.VarChar(254)
+  passwordHash String
+  role         Role       @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+  wallet       Wallet?
+  sessions     Session[]
+  apiKeys      ApiKey[]
+  apiRequests  ApiRequest[]
+  playgroundRuns PlaygroundRun[]
+  paymentOrders PaymentOrder[]
+  balanceAdjustments WalletTransaction[] @relation("AdjustmentAdmin")
+
+  @@index([createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_name_search_idx")
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_email_search_idx")
+}
+
+model Wallet {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @db.Uuid
+  balance         Decimal  @default(0) @db.Decimal(50, 20)
+  reservedBalance Decimal  @default(0) @db.Decimal(50, 20)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    WalletTransaction[]
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique @db.Char(64)
+  userId    String   @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  userAgent String   @db.VarChar(200)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+// Shared between application processes; authentication attempts survive restarts.
+model AuthRateLimit {
+  key         String   @db.Char(64)
+  windowStart DateTime @db.Timestamptz(3)
+  attempts    Int      @default(1)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}
+
+model ApiKey {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  name       String    @db.VarChar(64)
+  keyPrefix  String    @db.VarChar(13)
+  keyHash    String    @unique @db.Char(64)
+  lastUsedAt DateTime? @db.Timestamptz(3)
+  expiresAt  DateTime? @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiRequests ApiRequest[]
+  rateLimits GatewayRateLimit[]
+
+  @@index([userId, createdAt])
+}
+
+// Null usage means the upstream did not supply trustworthy usage, never an estimate.
+// Nullable references retain history when a key or model is deleted.
+model ApiRequest {
+  id           String           @id @default(uuid()) @db.Uuid
+  requestId    String           @unique @db.Uuid
+  userId       String           @db.Uuid
+  source       ApiRequestSource @default(API)
+  apiKeyId     String?          @db.Uuid
+  modelId      String?          @db.Uuid
+  provider     ModelProvider?
+  inputTokens  Int?
+  outputTokens Int?
+  totalTokens  Int?
+  status       ApiRequestStatus
+  latencyMs    Int
+  errorCode    String?          @db.VarChar(64)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  providerCost Decimal?         @db.Decimal(50, 20)
+  providerCostStatus ProviderCostStatus?
+  userCost     Decimal?         @db.Decimal(50, 20)
+  reservedAmount Decimal        @default(0) @db.Decimal(50, 20)
+  settledAt    DateTime?        @db.Timestamptz(3)
+  // Immutable price and budget snapshots; never read current Model prices at settlement.
+  modelSlug    String?          @db.VarChar(100)
+  inputPricePerMillion Decimal? @db.Decimal(22, 8)
+  outputPricePerMillion Decimal? @db.Decimal(22, 8)
+  markupMultiplier Decimal?     @db.Decimal(12, 6)
+  estimatedInputTokens Int?
+  maxOutputTokens Int?
+  modelContextWindow Int?
+  reservationExpiresAt DateTime? @db.Timestamptz(3)
+  transaction  WalletTransaction?
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKey       ApiKey?          @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  model        Model?           @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  attempts     ProviderAttempt[]
+
+  @@index([userId, createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([modelId, createdAt])
+  @@index([userId, status, reservationExpiresAt])
+  @@index([status, reservationExpiresAt, userId])
+  @@index([userId, createdAt, id])
+  @@index([userId, status, createdAt, id])
+  @@index([userId, modelId, createdAt, id])
+  @@index([userId, apiKeyId, createdAt, id])
+  @@index([createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([provider, createdAt, id])
+}
+
+// Claims a browser submission before dispatch. No prompts or responses are stored.
+model PlaygroundRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  submissionId String    @db.Uuid
+  rejectedAt   DateTime? @db.Timestamptz(3)
+  errorCode    String?   @db.VarChar(64)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, submissionId])
+  @@index([userId, createdAt])
+}
+
+model WalletTransaction {
+  id            String                @id @default(uuid()) @db.Uuid
+  walletId      String                @db.Uuid
+  type          WalletTransactionType  @default(USAGE)
+  amount        Decimal               @db.Decimal(50, 20)
+  balanceBefore Decimal               @db.Decimal(50, 20)
+  balanceAfter  Decimal               @db.Decimal(50, 20)
+  requestId     String?               @unique @db.Uuid
+  paymentOrderId String?              @unique @db.Uuid
+  adminId       String?               @db.Uuid
+  adjustmentId  String?               @db.Uuid
+  reason        String?               @db.VarChar(200)
+  model         String?               @db.VarChar(100)
+  description   String                @db.VarChar(200)
+  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
+  wallet        Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  apiRequest    ApiRequest?           @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
+  paymentOrder  PaymentOrder?         @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+  admin         User?                 @relation("AdjustmentAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@unique([adminId, adjustmentId])
+  @@index([walletId, createdAt])
+  @@index([walletId, createdAt, id])
+  @@index([adminId, createdAt])
+}
+
+// All amounts are CNY after the one-time, user-approved USD -> CNY conversion.
+model CurrencyMigration {
+  id           String   @id @db.VarChar(64)
+  fromCurrency String   @db.Char(3)
+  toCurrency   String   @db.Char(3)
+  rate         Decimal  @db.Decimal(10, 4)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model PaymentOrder {
+  id                    String        @id @default(uuid()) @db.Uuid
+  userId                String        @db.Uuid
+  orderNo               String        @unique @db.VarChar(32)
+  idempotencyKey        String        @db.Uuid
+  method                PaymentMethod
+  status                PaymentStatus @default(PENDING)
+  amount                Decimal       @db.Decimal(20, 2)
+  currency              String        @default("CNY") @db.Char(3)
+  merchantId            String        @db.VarChar(64)
+  appId                 String        @db.VarChar(64)
+  codeUrl               String?       @db.VarChar(2048)
+  qrCodeDataUrl         String?       @db.Text
+  providerTransactionId String?       @db.VarChar(128)
+  expiresAt             DateTime      @db.Timestamptz(3)
+  paidAt                DateTime?     @db.Timestamptz(3)
+  settledAt             DateTime?     @db.Timestamptz(3)
+  closedAt              DateTime?     @db.Timestamptz(3)
+  lastCheckedAt         DateTime?     @db.Timestamptz(3)
+  createdAt             DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @db.Timestamptz(3)
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction           WalletTransaction?
+
+  @@unique([userId, idempotencyKey])
+  @@unique([method, providerTransactionId])
+  @@index([userId, createdAt, id])
+  @@index([userId, status, expiresAt])
+  @@index([status, expiresAt])
+  @@index([createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([method, status, createdAt, id])
+}
+
+// An atomic PostgreSQL counter shared by all application processes.
+model GatewayRateLimit {
+  apiKeyId    String   @db.Uuid
+  windowStart DateTime @db.Timestamptz(3)
+  attempts    Int      @default(1)
+  apiKey      ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@id([apiKeyId, windowStart])
+  @@index([windowStart])
+}

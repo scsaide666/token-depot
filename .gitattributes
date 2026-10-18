@@ -1,0 +1,28 @@
+# AIHub line-ending policy.
+#
+# The project is authored with LF and deployed to Linux (Ubuntu 24.04) containers,
+# where CRLF breaks shell scripts, the Dockerfile and the Caddyfile.
+# Normalize text to LF in the repository and keep LF in every working copy.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+
+# Container, proxy and systemd inputs must stay LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+
+# Keep diffs readable in review tooling.
+package-lock.json -diff linguist-generated

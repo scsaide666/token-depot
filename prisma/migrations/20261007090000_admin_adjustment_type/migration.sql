@@ -1,0 +1,1 @@
+ALTER TYPE "WalletTransactionType" ADD VALUE 'ADMIN_ADJUSTMENT';

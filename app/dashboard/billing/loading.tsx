@@ -1,0 +1,2 @@
+import { ConsoleMetricsSkeleton, ConsolePageHeader, ConsoleTableSkeleton } from "@/components/dashboard/console-primitives";
+export default function Loading() { return <div className="console-page console-loading"><ConsolePageHeader title="Billing" description="Manage your balance, spending and transaction history." /><ConsoleMetricsSkeleton /><ConsoleTableSkeleton label="Loading billing history" /></div>; }

@@ -1,0 +1,31 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+(app_proxy) {
+	reverse_proxy app:3000 {
+		# Overwrite untrusted client identity headers.
+		header_up X-AIHub-Client-IP {remote_host}
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 240s
+		}
+		# SSE is automatically flushed by Caddy. Do not set flush_interval -1:
+		# that mode keeps upstream work running after a client disconnect.
+	}
+}
+{$SITE_DOMAIN} {
+	import app_proxy
+}
+{$API_DOMAIN} {
+	@api path /v1/*
+	handle @api {
+		import app_proxy
+	}
+	handle {
+		respond "Not found" 404
+	}
+}
+http://127.0.0.1:2015 {
+	respond /healthz 200
+}

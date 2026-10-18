@@ -1,0 +1,21 @@
+{
+	admin off
+}
+https://localhost:8443 {
+	tls internal
+	handle_path /__docker_test_sse/* {
+		reverse_proxy sse-fixture:3188
+	}
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-AIHub-Client-IP {remote_host}
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 240s
+			}
+		}
+	}
+}
+http://127.0.0.1:2015 {
+	respond /healthz 200
+}

@@ -1,0 +1,24 @@
+title = "Token Depot public-source secret scanning"
+
+[extend]
+useDefault = true
+
+# Exact non-credential documentation placeholders only. Keep real keys and
+# generated test credentials subject to every default detection rule.
+[[allowlists]]
+description = "Literal API-key placeholders in documented curl examples"
+condition = "AND"
+paths = [
+  '''^README\.md$''',
+  '''^docs/(?:deepseek|gateway)\.md$''',
+  '''^lib/model-types\.ts$''',
+]
+regexTarget = "secret"
+regexes = ['''^(?:YOUR_PLATFORM_API_KEY|YOUR_API_KEY)$''']
+
+[[allowlists]]
+description = "Explicitly unconfigured IP hash secret in the example template"
+condition = "AND"
+paths = ['''^deploy/app\.env\.example$''']
+regexTarget = "secret"
+regexes = ['''^REPLACE_WITH_64_HEX_CHARACTERS$''']

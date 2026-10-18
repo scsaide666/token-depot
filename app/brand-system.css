@@ -1,0 +1,80 @@
+.aihub-brand { display: inline-flex; flex-shrink: 0; align-items: center; gap: 8px; border-radius: var(--radius-control); color: var(--foreground); }
+.aihub-brand-wordmark { font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.04em; }
+.aihub-brand[data-variant="sidebar"] .aihub-brand-wordmark { font-size: 16px; }
+.aihub-brand[data-variant="auth"] { gap: var(--space-3); }
+.aihub-brand[data-variant="auth"] .aihub-brand-wordmark { font-size: 20px; }
+.aihub-brand-mark { display: block; flex-shrink: 0; border-radius: var(--radius-control); }
+.aihub-provider-mark { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--secondary); color: var(--link); font: 500 12px/1 var(--font-code); }
+.aihub-api-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 24px 0; padding: 0; list-style: none; }
+.aihub-api-flow li { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.aihub-api-flow li + li::before { content: ""; position: absolute; top: 20px; right: calc(50% + 28px); width: calc(100% - 32px); border-top: 1px solid var(--border); }
+.aihub-flow-node { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--card); }
+.aihub-api-flow code { color: var(--foreground); font: 500 12px/20px var(--font-code); }
+.aihub-api-flow small { color: var(--muted-foreground); font-size: 11px; line-height: 16px; }
+.aihub-token-value { font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+.aihub-token-breakdown { margin-top: 16px; }
+.aihub-token-track { display: flex; overflow: hidden; height: 3px; border-radius: 2px; background: var(--secondary); }
+.aihub-token-track span:first-child { background: var(--chart-line); }
+.aihub-token-track span:last-child { background: var(--chart-secondary); }
+.aihub-token-legend { display: flex; gap: 16px; margin-top: 8px; color: var(--muted-foreground); font-size: 10px; line-height: 16px; }
+.aihub-token-legend span { display: flex; align-items: center; gap: 6px; }
+.aihub-token-legend i { width: 6px; height: 6px; background: var(--chart-line); }
+.aihub-token-legend span:last-child i { background: var(--chart-secondary); }
+[data-slot="badge"][data-api-status]::before { content: ""; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+[data-slot="badge"][data-api-status="PENDING"]::before { background: transparent; border: 1px solid currentColor; }
+.aihub-theme-control { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--secondary); }
+.aihub-theme-control button { flex-shrink: 0; width: 36px; height: 36px; border: 1px solid transparent; border-radius: var(--radius-control); }
+.aihub-theme-control button[aria-pressed="true"] { border-color: var(--input); background: var(--active-background); color: var(--active-foreground); }
+.aihub-theme-control button:hover { background: var(--card); }
+.aihub-brand-specimens { display: grid; gap: 24px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.aihub-brand-specimens > div { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.aihub-brand-specimens p { color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+
+@layer base {
+  select { height: var(--control-height); border: 1px solid var(--input); border-radius: var(--radius-control); background-color: var(--card); color: var(--foreground); padding: 8px 12px; font-family: var(--font-ui); font-size: 14px; transition: border-color var(--motion-fast) var(--ease-natural); }
+  select:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.5; }
+  select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  code, pre, kbd, samp { font-family: var(--font-code); }
+  h1, h2, h3 { text-wrap: balance; }
+}
+
+/* Shared proportions for console pages; public hero and article titles keep their own scale. */
+.ui-page-title { font-size: var(--type-page-title); font-weight: 600; line-height: 1.25; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.ui-page-description { margin-top: var(--space-2); max-width: var(--content-reading); font-size: 13px; line-height: 1.65; color: var(--muted-foreground); text-wrap: pretty; }
+.ui-section-title { font-size: var(--type-section-title); font-weight: 500; line-height: 1.5; letter-spacing: -0.02em; }
+.ui-marketing-title { font-size: clamp(36px, 4vw, 48px); font-weight: 600; line-height: 1.15; letter-spacing: -0.045em; }
+.ui-dialog-surface[data-slot="dialog-content"],
+.ui-floating-surface:is([data-slot="dropdown-menu-content"], [data-slot="popover-content"]) { background: var(--surface-raised); box-shadow: var(--shadow-floating); }
+.ui-pressable > svg { stroke-width: var(--icon-stroke); }
+[data-slot="usage-chart-tooltip"] { background: var(--surface-raised); border-radius: var(--radius-control); }
+[data-slot="data-pagination"] { font-variant-numeric: tabular-nums; }
+
+/* Admin uses the same proportions as the user console, with a quiet secondary rail. */
+.admin-console .admin-sidebar { background: var(--secondary); border-color: var(--border); }
+.admin-console .admin-header { height: 56px; background: var(--card); border-color: var(--border); }
+.admin-console .admin-main { max-width: var(--content-console); padding-top: var(--space-8); }
+.admin-console .admin-nav-item { min-height: var(--control-height-small); gap: var(--space-2); font-size: var(--type-label); border: 1px solid transparent; }
+.admin-console .admin-nav-item[aria-current="page"] { border-color: var(--border); box-shadow: none; }
+.admin-console .admin-metrics { border-radius: var(--radius-panel); }
+.admin-console .admin-metric { border: 0; }
+.admin-console .admin-metric:nth-child(even) { border-left: 1px solid var(--border); }
+.admin-console .admin-metric:nth-child(n+3) { border-top: 1px solid var(--border); }
+.admin-console .admin-table [data-slot="table-head"] { height: var(--table-head-height); font-size: var(--type-label); font-weight: 500; }
+.admin-console .admin-table [data-slot="table-cell"] { height: var(--table-row-height); font-size: var(--type-label); }
+@media (min-width: 1024px) {
+  .admin-console .admin-metric:nth-child(n+3) { border-top: 0; }
+  .admin-console .admin-metric:nth-child(n+5) { border-top: 1px solid var(--border); }
+  .admin-console .admin-metric:not(:nth-child(4n+1)) { border-left: 1px solid var(--border); }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .admin-console .admin-nav-item { min-height: 44px; }
+}
+
+@media (max-width: 640px) {
+  .aihub-brand-specimens { grid-template-columns: minmax(0, 1fr); }
+  .aihub-theme-control button { width: 40px; height: 40px; }
+}
+@media (max-width: 380px) {
+  .aihub-api-flow { gap: 12px; }
+  .aihub-api-flow small { font-size: 10px; }
+}

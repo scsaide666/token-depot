@@ -1,0 +1,80 @@
+name: td-commercial-20261016
+# Acceptance-only, no public ports and no egress to payment or AI providers.
+services:
+  postgres:
+    image: postgres:17.11-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    environment: { POSTGRES_DB: aihub_auth_test, POSTGRES_USER: aihub, POSTGRES_PASSWORD_FILE: /run/secrets/db-password }
+    secrets: [db-password]
+    networks: [sandbox]
+    volumes: [commercial_pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U aihub -d aihub_auth_test']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    cpus: 0.6
+    restart: 'no'
+  redis:
+    image: redis:7.4.11-bookworm@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+    network_mode: service:postgres
+    secrets: [redis-password]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        umask 077
+        printf 'bind 127.0.0.1\nprotected-mode yes\nappendonly yes\nmaxmemory 128mb\nmaxmemory-policy noeviction\nrequirepass %s\n' "$$(cat /run/secrets/redis-password)" > /tmp/redis.conf
+        chown redis:redis /tmp/redis.conf
+        exec /usr/local/bin/docker-entrypoint.sh redis-server /tmp/redis.conf
+    volumes: [commercial_redis:/data]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH=$$(cat /run/secrets/redis-password) redis-cli ping | grep -q PONG']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    cpus: 0.2
+    restart: 'no'
+  tools:
+    image: token-depot-reliability-sdk:20261016
+    network_mode: service:postgres
+    entrypoint: [/bin/sh, -ec]
+    environment:
+      TD_COMMERCIAL_TEST_PROJECT: ${TD_COMMERCIAL_TEST_PROJECT:-td-commercial-20261016}
+      TD_COMMERCIAL_RUN_ID: ${TD_COMMERCIAL_RUN_ID:-manual}
+    command: ['set -a; . /run/secrets/test_env; set +a; exec node --conditions=react-server --import tsx scripts/test-commercial.ts']
+    secrets: [test_env]
+    volumes:
+      - '../scripts:/app/scripts:ro'
+      - '../docker-test-results/commercial-20261016/evidence:/commercial-evidence'
+      - '../../../work:/work'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    cpus: 1.0
+    restart: 'no'
+  suite-postgres:
+    extends: { service: postgres }
+    volumes: [commercial_suite_pg:/var/lib/postgresql/data]
+  suite-redis:
+    extends: { service: redis }
+    network_mode: service:suite-postgres
+    depends_on: { suite-postgres: { condition: service_healthy } }
+    volumes: [commercial_suite_redis:/data]
+  suite-tools:
+    extends: { service: tools }
+    network_mode: service:suite-postgres
+    command: ['set -a; . /run/secrets/test_env; set +a; exec npm test']
+networks:
+  sandbox: { internal: true }
+volumes:
+  commercial_pg: {}
+  commercial_redis: {}
+  commercial_suite_pg: {}
+  commercial_suite_redis: {}
+secrets:
+  db-password: { file: '../docker-test-results/commercial-20261016/secrets/db-password' }
+  redis-password: { file: '../docker-test-results/commercial-20261016/secrets/redis-password' }
+  test_env: { file: '../docker-test-results/commercial-20261016/secrets/test.env' }
