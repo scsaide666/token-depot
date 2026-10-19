@@ -5,6 +5,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
+COPY tooling/eslint-glob ./tooling/eslint-glob
 RUN npm ci
 COPY . .
 # Build uses placeholders only; production secrets enter at runtime.

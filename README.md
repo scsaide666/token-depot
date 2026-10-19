@@ -81,6 +81,7 @@ This request needs an enabled, configured model and sufficient wallet balance an
 ```bash
 npm run lint
 npm run typecheck
+npm run test:lint-security
 npm run test:home
 npm run test:dashboard-ui
 npm run test:core-ui
@@ -92,6 +93,8 @@ npm run build
 Browser tests and Lighthouse require separate local tool installation; see the Windows guide. Historical internal audit reports, credentials, screenshots containing accounts and database backups are intentionally outside this public repository. Checks of a local build do not establish real-provider or real-merchant readiness.
 
 The included `.gitleaks.toml` extends default detection rules and narrowly recognizes literal example placeholders. With Gitleaks installed, scan the repository history with `gitleaks git --log-opts="--all" --redact --ignore-gitleaks-allow` before publishing your own changes.
+
+The development-only directory matcher used by Next's ESLint plugin has a scoped local replacement to remove the vulnerable `braces` dependency chain. Keep `tooling/eslint-glob` in the checkout and Docker build context; see [lint security](docs/lint-security.md) for the contract and regression checks.
 
 ## Security and production boundaries
 

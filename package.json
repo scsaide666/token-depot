@@ -10,6 +10,7 @@
     "postbuild": "node scripts/font-preloads.mjs --verify",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
+    "test:lint-security": "node scripts/test-eslint-security.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
@@ -84,7 +85,10 @@
   "overrides": {
     "deepmerge-ts": "8.0.0",
     "mysql2": "3.23.1",
-    "urllib": "4.9.1"
+    "urllib": "4.9.1",
+    "@next/eslint-plugin-next@16.3.8": {
+      "fast-glob": "$fast-glob"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -99,7 +103,8 @@
     "prisma": "7.10.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "fast-glob": "file:./tooling/eslint-glob"
   },
   "license": "MIT",
   "description": "An open-source AI API developer platform with a blue-and-white Geist interface.",

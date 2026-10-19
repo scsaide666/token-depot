@@ -4,7 +4,7 @@ Prepared on 2026-10-18 from the existing Token Depot worktree. This is a separat
 
 ## What this snapshot preserves
 
-The current application, UI, API routes, permissions, provider adapters, payment code, Prisma schema and migrations are preserved. The supplied blue TD logo and blue-and-white Light / Dark interface are retained. Package dependency versions are unchanged.
+The current application, UI, API routes, permissions, provider adapters, payment code, Prisma schema and migrations are preserved. The supplied blue TD logo and blue-and-white Light / Dark interface are retained. Runtime dependency versions are unchanged; the development-only lint security fix is described below.
 
 Public-release changes are limited to repository metadata, MIT licensing, documentation, ignore rules and portable Python/curl test-runner discovery instead of a maintainer-specific absolute path. Internal identifiers such as `AIHUB_*`, `sk-aihub-` and legacy asset aliases are retained intentionally; changing them would affect compatibility.
 
@@ -26,7 +26,7 @@ Only placeholder environment examples are included. Test code contains generated
 | Token billing | Decimal reservations, settlement and ledger code included | Real cache-token / peak-period costs are not fully reconciled; configured provider cost and margin are not independently verified gross profit. |
 | Alipay / WeChat Pay | Signed provider integration and Mock fixtures included | Merchant approval, production credentials, public HTTPS callbacks and real reconciliation. Payments stay disabled by default. No live payment acceptance is claimed. |
 | Accounts | Registration, login, sessions, roles and name updates included | Password-reset, password-change and account-deletion flows are not complete production account management. |
-| Dependencies and containers | Pinned lockfile and image templates included | Prior reviews recorded development-tool HIGH advisories and container CVEs. This source publication does not resolve or certify them. Re-scan at deployment time. |
+| Dependencies and containers | Pinned lockfile and image templates included; follow-up source fix removes the vulnerable development-only glob chain | The initial publication recorded five development HIGH entries. See [lint security](lint-security.md) for the included fix. Container CVEs are a separate, unresolved gate; re-scan at deployment time. |
 | Backup and recovery | Encryption and isolated recovery tooling included | An independently authorized off-machine storage target and real disaster-recovery exercise are not certified. |
 | Operating eligibility | No approvals bundled | The operator must confirm entity, ICP/telecom and applicable AI-service obligations, merchant access and upstream authorization. Foreign hosting alone is not an exemption. |
 | Production deployment | Templates only | No server purchased, no public service enabled, no production migration or payment made by publishing this repository. |
@@ -40,6 +40,10 @@ These are local source/build and test-suite checks. They are not a fresh browser
 The official npm registry audit recorded **5 HIGH development dependency entries** in the ESLint chain: `eslint-config-next`, `@next/eslint-plugin-next`, `fast-glob`, `micromatch` and `braces`. The separate `npm audit --omit=dev` run recorded **0 production dependency advisories** at that time. No forced dependency downgrade or unrelated business-code change was made. This does not cover container OS vulnerabilities or future advisories.
 
 The source comparison verified that 334 application, permission/proxy and Prisma files match the private worktree byte for byte. Secret scanning keeps default Gitleaks rules and only excludes exact non-credential example placeholders in explicitly named documentation/template files; it does not exclude whole source or test directories.
+
+The five HIGH findings above describe the initial publication audit. A follow-up source fix, verified on October 18–19, replaces only the lint dependency chain through a scoped compatibility adapter; it does not change application logic or represent a newly deployed production version. See [lint security](lint-security.md) and run the commands there against the checkout you use.
+
+The final local lockfile audit for that fix returned zero advisories. Clean installation, thirteen targeted regression checks, twelve existing suites and the production build also passed. These results apply to the source with the scoped adapter included; they do not clear container or commercial-readiness gates.
 
 ## Where to start
 

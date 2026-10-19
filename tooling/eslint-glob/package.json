@@ -1,0 +1,11 @@
+{
+  "name": "@token-depot/eslint-glob",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Narrow globSync compatibility adapter for the pinned Next.js ESLint plugin.",
+  "main": "index.cjs",
+  "license": "MIT",
+  "dependencies": {
+    "tinyglobby": "0.2.17"
+  }
+}
